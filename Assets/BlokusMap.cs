@@ -8,7 +8,8 @@ public class BlokusMap : MonoBehaviour
 
     private const int NB_COL = 22;
     private const int NB_ROW = 22;
-    private readonly int[,] blokus_map = new int[NB_COL, NB_ROW];
+    public readonly int[,] blokus_map = new int[NB_COL, NB_ROW];
+
 
     public Grid grid;
     public Tilemap tilemap;
@@ -25,6 +26,8 @@ public class BlokusMap : MonoBehaviour
     private const int GREEN_TILE = 3;
     private const int RED_TILE = 4;
     private const int YELLOW_TILE = 5;
+
+    private int[,] selectedPieceMap = null;
 
     // Use this for initialization
     void Start() {
@@ -52,26 +55,66 @@ public class BlokusMap : MonoBehaviour
         // Get coordinate on mouse click
         if (Input.GetMouseButtonDown(0)) {
             Vector3 pos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            Vector3Int coordinate = grid.WorldToCell(pos);
-            Debug.Log(coordinate);
 
-            if ((coordinate.x > 0 && coordinate.x < NB_COL)
-                && (coordinate.y > 0 && coordinate.y < NB_ROW)
-                && blokus_map[coordinate.x, coordinate.y] == GROUND_TILE) {
+            Vector2 mousePos2d = new Vector2(pos.x, pos.y);
+            RaycastHit2D hit = Physics2D.Raycast(mousePos2d, Vector2.zero);
 
-                blokus_map[coordinate.x, coordinate.y] = BLUE_TILE;
-                tilemap.SetTile(coordinate, blue_bloc);
+            // Get the value of the piece selected
+            if (hit.collider != null) {
+                Debug.Log(hit.collider.gameObject.name);
+                Piece p = hit.collider.gameObject.GetComponent<Piece>();
+
+                if (p != null) {
+                    selectedPieceMap = p.piece_form;
+                }
             }
+
+            // Try to place the piece selected
+            if (selectedPieceMap != null) {
+                Vector3Int coordinate = grid.WorldToCell(pos);
+                Debug.Log(coordinate);
+
+                int col = selectedPieceMap.GetLength(0);
+                int row = selectedPieceMap.GetLength(1);
+
+                // Verify the limit of the map
+                if ((coordinate.x > 0 && coordinate.x < NB_COL)
+                    && (coordinate.y > 0 && coordinate.y < NB_ROW)
+                    && blokus_map[coordinate.x, coordinate.y] == GROUND_TILE) {
+
+                    // Verify if there is space for the piece
+                    bool spaceAvailable = true;
+                    void VerifySpace() {
+                        for (int x = 0; x < col; x++) {
+                            for (int y = 0; y < row; y++) {
+                                if (coordinate.x + x >= NB_COL || coordinate.y + y >= NB_ROW ||
+                                   (selectedPieceMap[x, y] == 1 && blokus_map[coordinate.x + x, coordinate.y + y] != GROUND_TILE)) {
+                                    Debug.Log("No space available");
+                                    spaceAvailable = false;
+                                    return; // exit the nested loop
+                                }
+                            }
+                        }
+                    }
+                    VerifySpace();
+
+                    if (spaceAvailable) {
+                        // Place the piece
+                        for (int x = 0; x < col; x++) {
+                            for (int y = 0; y < row; y++) {
+                                if (selectedPieceMap[x, y] == 1) {
+                                    Vector3Int v3int = new Vector3Int(coordinate.x + x, coordinate.y + y, 0);
+                                    blokus_map[v3int.x, v3int.y] = BLUE_TILE;
+                                    tilemap.SetTile(v3int, green_bloc);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         }
 
     }
-    
-    // WIP
-    //private void PutBloc(Vector3Int position, int[,] matrix) {
-    //    // check position
-    //    if ((position.x > 0 && position.x < NB_COL)
-    //        && (position.y > 0 && position.y < NB_ROW)) {
 
-    //    }
-    //}
 }

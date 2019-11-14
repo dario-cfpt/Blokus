@@ -1,15 +1,11 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Tilemaps;
 
 public class BlokusMap : MonoBehaviour
 {
-
     private const int NB_COL = 22;
     private const int NB_ROW = 22;
     public readonly int[,] blokus_map = new int[NB_COL, NB_ROW];
-
 
     public Grid grid;
     public Tilemap tilemap;
@@ -115,6 +111,49 @@ public class BlokusMap : MonoBehaviour
 
         }
 
+        RotateSelectedPiece();
+    }
+
+    /// <summary>
+    /// Rotate the selected piece when the user press the right or left arrow key
+    /// </summary>
+    private void RotateSelectedPiece() {
+        if (selectedPieceMap != null) {
+            if (Input.GetKeyDown(KeyCode.RightArrow)) {
+                selectedPieceMap = RotatePiece(selectedPieceMap, true);
+            } else if (Input.GetKeyDown(KeyCode.LeftArrow)) {
+                selectedPieceMap = RotatePiece(selectedPieceMap, false);
+            }
+        }
+    }
+
+    private int[,] RotatePiece(int[,] src, bool rotateClockWise = true) {
+        int nbCol = src.GetUpperBound(0) + 1; // + 1 to get the size (and not the index) of the dimension
+        int nbRow = src.GetUpperBound(1) + 1;
+
+        // Inverse the col and row if the array don't have the same size
+        // This avoid an out of bound exception
+        int[,] dst = (nbCol == nbRow) ? new int[nbCol, nbRow]
+                                      : new int[nbRow, nbCol];
+
+        for (int col = 0; col < nbCol; col++) {
+            for (int row = 0; row < nbRow; row++) {
+                int dstRow;
+                int dstCol;
+
+                if (rotateClockWise) {
+                    dstRow = nbCol - (col + 1);
+                    dstCol = row;
+                } else {
+                    dstRow = col;
+                    dstCol = nbRow - (row + 1);
+                }
+
+                dst[dstCol, dstRow] = src[col, row];
+            }
+        }
+
+        return dst;
     }
 
 }

@@ -123,6 +123,8 @@ public class BlokusMap : MonoBehaviour
                 selectedPieceMap = RotatePiece(selectedPieceMap, true);
             } else if (Input.GetKeyDown(KeyCode.LeftArrow)) {
                 selectedPieceMap = RotatePiece(selectedPieceMap, false);
+            } else if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.DownArrow)) {
+                selectedPieceMap = ReversePiece(selectedPieceMap);
             }
         }
     }
@@ -138,15 +140,14 @@ public class BlokusMap : MonoBehaviour
 
         for (int col = 0; col < nbCol; col++) {
             for (int row = 0; row < nbRow; row++) {
-                int dstRow;
-                int dstCol;
+                int dstCol, dstRow;
 
                 if (rotateClockWise) {
-                    dstRow = nbCol - (col + 1);
                     dstCol = row;
+                    dstRow = nbCol - (col + 1);
                 } else {
-                    dstRow = col;
                     dstCol = nbRow - (row + 1);
+                    dstRow = col;
                 }
 
                 dst[dstCol, dstRow] = src[col, row];
@@ -156,4 +157,22 @@ public class BlokusMap : MonoBehaviour
         return dst;
     }
 
+    private int[,] ReversePiece(int[,] src) {
+        int nbCol = src.GetUpperBound(0) + 1; // + 1 to get the size (and not the index) of the dimension
+        int nbRow = src.GetUpperBound(1) + 1;
+        int[,] dst = new int[nbCol, nbRow];
+
+        for (int col = 0; col < nbCol; col++) {
+            for (int row = 0; row < nbRow; row++) {
+                int dstRow, dstCol;
+
+                dstRow = (nbRow - 1) - row;
+                dstCol = col;
+
+                dst[dstCol, dstRow] = src[col, row];
+            }
+        }
+
+        return dst;
+    }
 }

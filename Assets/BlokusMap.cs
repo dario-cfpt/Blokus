@@ -8,6 +8,7 @@ public class BlokusMap : MonoBehaviour
     public readonly int[,] blokus_map = new int[NB_COL, NB_ROW];
 
     public Grid grid;
+    public GameObject panel;
     public Tilemap tilemap;
     public TileBase ground;
     public TileBase wall;
@@ -15,6 +16,10 @@ public class BlokusMap : MonoBehaviour
     public TileBase green_bloc;
     public TileBase red_bloc;
     public TileBase yellow_bloc;
+    public TileBase preview_blue_bloc;
+    public TileBase preview_green_bloc;
+    public TileBase preview_red_bloc;
+    public TileBase preview_yellow_bloc;
 
     private const int GROUND_TILE = 0;
     private const int WALL_TILE = 1;
@@ -24,6 +29,7 @@ public class BlokusMap : MonoBehaviour
     private const int YELLOW_TILE = 5;
 
     private int[,] selectedPieceMap = null;
+    private GameObject previewPiece;
 
     // Use this for initialization
     void Start() {
@@ -44,6 +50,16 @@ public class BlokusMap : MonoBehaviour
                 blokus_map[x, y] = actualTile;
             }
         }
+        // Indicate start position
+        tilemap.SetTile(new Vector3Int(0, 0, 0), preview_blue_bloc);
+        blokus_map[0, 0] = BLUE_TILE;
+        tilemap.SetTile(new Vector3Int(0, NB_ROW - 1, 0), preview_green_bloc);
+        blokus_map[0, NB_ROW - 1] = GREEN_TILE;
+        tilemap.SetTile(new Vector3Int(NB_COL - 1, NB_ROW - 1, 0), preview_red_bloc);
+        blokus_map[NB_COL - 1, NB_ROW - 1] = RED_TILE;
+        tilemap.SetTile(new Vector3Int(NB_COL - 1, 0, 0), preview_yellow_bloc);
+        blokus_map[NB_COL - 1, 0] = YELLOW_TILE;
+
     }
 
     // Update is called once per frame
@@ -59,6 +75,12 @@ public class BlokusMap : MonoBehaviour
             if (hit.collider != null) {
                 Debug.Log(hit.collider.gameObject.name);
                 Piece p = hit.collider.gameObject.GetComponent<Piece>();
+
+                if (previewPiece != null) {
+                    // Destroy the previous piece to avoid multiple clone
+                    Destroy(previewPiece);
+                }
+                previewPiece = Instantiate(hit.collider.gameObject, panel.transform);
 
                 if (p != null) {
                     selectedPieceMap = p.piece_form;
@@ -79,22 +101,20 @@ public class BlokusMap : MonoBehaviour
                     && blokus_map[coordinate.x, coordinate.y] == GROUND_TILE) {
 
                     // Verify if there is space for the piece
-                    bool spaceAvailable = true;
-                    void VerifySpace() {
+                    bool VerifySpace() {
                         for (int x = 0; x < col; x++) {
                             for (int y = 0; y < row; y++) {
                                 if (coordinate.x + x >= NB_COL || coordinate.y + y >= NB_ROW ||
                                    (selectedPieceMap[x, y] == 1 && blokus_map[coordinate.x + x, coordinate.y + y] != GROUND_TILE)) {
                                     Debug.Log("No space available");
-                                    spaceAvailable = false;
-                                    return; // exit the nested loop
+                                    return false;
                                 }
                             }
                         }
+                        return true;
                     }
-                    VerifySpace();
 
-                    if (spaceAvailable) {
+                    if (VerifySpace()) {
                         // Place the piece
                         for (int x = 0; x < col; x++) {
                             for (int y = 0; y < row; y++) {
@@ -105,6 +125,8 @@ public class BlokusMap : MonoBehaviour
                                 }
                             }
                         }
+                        selectedPieceMap = null;
+                        Destroy(previewPiece);
                     }
                 }
             }
@@ -112,24 +134,82 @@ public class BlokusMap : MonoBehaviour
         }
 
         RotateSelectedPiece();
+
+        RefreshGroundTiles();
+
+        DisplayPreviewPiece();
+    }
+
+    private void DisplayPreviewPiece() {
+        if (previewPiece != null && selectedPieceMap != null) {
+            // Show visual piece preview [WIP]
+            // Vector2 vec2 = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            // previewPiece.transform.position = new Vector3(vec2.x - 6.1f, vec2.y - 7.8f, 0);
+
+            // Change the bloc of the grid to show the real preview
+            Vector3Int previewCoordinate = grid.WorldToCell(Camera.main.ScreenToWorldPoint(Input.mousePosition));
+            int col = selectedPieceMap.GetLength(0);
+            int row = selectedPieceMap.GetLength(1);
+
+            for (int x = 0; x < col; x++) {
+                for (int y = 0; y < row; y++) {
+                    if (selectedPieceMap[x, y] == 1) {
+                        if (previewCoordinate.x + x < NB_COL && previewCoordinate.y + y < NB_ROW
+                            && previewCoordinate.x >= 0 && previewCoordinate.y >= 0
+                            && selectedPieceMap[x, y] == 1 && blokus_map[previewCoordinate.x + x, previewCoordinate.y + y] == GROUND_TILE) {
+
+                            Vector3Int pos = new Vector3Int(previewCoordinate.x + x, previewCoordinate.y + y, 0);
+                            tilemap.SetTile(pos, preview_green_bloc);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Re-set the ground tiles in order to delete the "previews tiles"
+    /// </summary>
+    private void RefreshGroundTiles() {
+        int col = blokus_map.GetLength(0);
+        int row = blokus_map.GetLength(1);
+
+        for (int x = 0; x < col; x++) {
+            for (int y = 0; y < row; y++) {
+                Vector3Int pos = new Vector3Int(x, y, 0);
+
+                if (blokus_map[x, y] == GROUND_TILE) {
+                    tilemap.SetTile(pos, ground);
+                }
+            }
+        }
     }
 
     /// <summary>
     /// Rotate the selected piece when the user press the right or left arrow key
     /// </summary>
     private void RotateSelectedPiece() {
+        // TODO: create options to configure shortcuts
         if (selectedPieceMap != null) {
+            // Rotate
             if (Input.GetKeyDown(KeyCode.RightArrow)) {
                 selectedPieceMap = RotatePiece(selectedPieceMap, true);
             } else if (Input.GetKeyDown(KeyCode.LeftArrow)) {
                 selectedPieceMap = RotatePiece(selectedPieceMap, false);
             } else if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.DownArrow)) {
+                selectedPieceMap = RotatePiece(selectedPieceMap, true, 2);
+            }
+            // Reverse
+            else if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.D)) {
+                selectedPieceMap = ReversePiece(selectedPieceMap);
+                selectedPieceMap = RotatePiece(selectedPieceMap, true, 2);
+            } else if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.S)) {
                 selectedPieceMap = ReversePiece(selectedPieceMap);
             }
         }
     }
 
-    private int[,] RotatePiece(int[,] src, bool rotateClockWise = true) {
+    private int[,] RotatePiece(int[,] src, bool rotateClockWise = true, int nbRotation = 1) {
         int nbCol = src.GetUpperBound(0) + 1; // + 1 to get the size (and not the index) of the dimension
         int nbRow = src.GetUpperBound(1) + 1;
 
@@ -154,7 +234,7 @@ public class BlokusMap : MonoBehaviour
             }
         }
 
-        return dst;
+        return (nbRotation > 1) ? RotatePiece(dst, rotateClockWise, nbRotation - 1) : dst;
     }
 
     private int[,] ReversePiece(int[,] src) {

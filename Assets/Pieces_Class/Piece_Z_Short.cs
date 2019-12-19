@@ -1,10 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-public class Piece_Z_Short : Piece
+﻿public class Piece_Z_Short : Piece
 {
-    public override int[,] piece_form {
+    public override int[,] PieceForm {
         get {
             return new int[3, 2] {
                 { 0, 1},
@@ -13,6 +9,8 @@ public class Piece_Z_Short : Piece
             };
         }
     }
+
+    public override string PrefabPath { get => "Pieces_Prefab/Short Z"; }
 
     // Start is called before the first frame update
     void Start()

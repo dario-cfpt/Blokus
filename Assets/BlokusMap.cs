@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using Assets;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Tilemaps;
 
 public class BlokusMap : MonoBehaviour
@@ -7,11 +9,17 @@ public class BlokusMap : MonoBehaviour
     private const int NB_ROW = 22;
     public readonly int[,] blokus_map = new int[NB_COL, NB_ROW];
 
+    private const float PIECE_SCALE = 28.7334f;
+    private const float PIECE_START_POS_X = -13.8f;
+    private const float PIECE_START_POS_Y = -1.9f;
+    private const float PIECE_MAX_POS_X = -8.3f;
+
     public Grid grid;
     public GameObject panel;
     public Tilemap tilemap;
     public TileBase ground;
     public TileBase wall;
+    public TileBase default_bloc;
     public TileBase blue_bloc;
     public TileBase green_bloc;
     public TileBase red_bloc;
@@ -23,20 +31,10 @@ public class BlokusMap : MonoBehaviour
 
     private const int GROUND_TILE = 0;
     private const int WALL_TILE = 1;
-    private const int BLUE_TILE = 2;
-    private const int GREEN_TILE = 3;
-    private const int RED_TILE = 4;
-    private const int YELLOW_TILE = 5;
-
-    /// <summary>
-    /// The value of a player is the same as the value of the color corresponding to the player
-    /// </summary>
-    private enum Player {
-        Blue = BLUE_TILE,
-        Green = GREEN_TILE,
-        Red = RED_TILE,
-        Yellow = YELLOW_TILE
-    }
+    private const int BLUE_TILE = (int)BlokusColor.BLUE;
+    private const int GREEN_TILE = (int)BlokusColor.GREEN;
+    private const int RED_TILE = (int)BlokusColor.RED;
+    private const int YELLOW_TILE = (int)BlokusColor.YELLOW;
 
     private readonly Vector3Int START_POSITION_BLUE = new Vector3Int(0, 0, 0);
     private readonly Vector3Int START_POSITION_GREEN = new Vector3Int(0, NB_ROW - 1, 0);
@@ -46,13 +44,24 @@ public class BlokusMap : MonoBehaviour
     private int[,] selectedPieceMap = null;
     private GameObject previewPiece;
 
-    private Player currentPlayer = Player.Green;
+    private List<GameObject> currentDisplayedPieces = new List<GameObject>();
+    private List<Player> playerList;
+    private Player currentPlayer;
+    private Piece currentPiece;
 
     // Use this for initialization
     void Start() {
         TileBase tile;
         int actualTile;
 
+        playerList = new List<Player>();
+        playerList.Add(new Player(BlokusColor.BLUE));
+        playerList.Add(new Player(BlokusColor.GREEN));
+        playerList.Add(new Player(BlokusColor.RED));
+        playerList.Add(new Player(BlokusColor.YELLOW));
+        currentPlayer = playerList[0];
+
+        // Create the map
         for (int x = 0; x < NB_COL; x++) {
             for (int y = 0; y < NB_ROW; y++) {
                 Vector3Int p = new Vector3Int(x, y, 0);
@@ -81,6 +90,7 @@ public class BlokusMap : MonoBehaviour
         tilemap.SetTile(START_POSITION_YELLOW, preview_yellow_bloc);
         blokus_map[START_POSITION_YELLOW.x, START_POSITION_YELLOW.y] = YELLOW_TILE;
 
+        DisplayPiecesOfPlayer(currentPlayer);
     }
 
     // Update is called once per frame
@@ -91,11 +101,10 @@ public class BlokusMap : MonoBehaviour
 
             Vector2 mousePos2d = new Vector2(pos.x, pos.y);
             RaycastHit2D hit = Physics2D.Raycast(mousePos2d, Vector2.zero);
-
             // Get the value of the piece selected
             if (hit.collider != null) {
                 Debug.Log(hit.collider.gameObject.name);
-                Piece p = hit.collider.gameObject.GetComponent<Piece>();
+                currentPiece = hit.collider.gameObject.GetComponent<Piece>();
 
                 if (previewPiece != null) {
                     // Destroy the previous piece to avoid multiple clone
@@ -103,13 +112,13 @@ public class BlokusMap : MonoBehaviour
                 }
                 previewPiece = Instantiate(hit.collider.gameObject, panel.transform);
 
-                if (p != null) {
-                    selectedPieceMap = p.piece_form;
+                if (currentPiece != null) {
+                    selectedPieceMap = currentPiece.PieceForm;
                     // Replace the value of the selected piece with the value of current player
                     for (int x = 0; x <= selectedPieceMap.GetUpperBound(0); x++) {
                         for (int y = 0; y <= selectedPieceMap.GetUpperBound(1); y++) {
                             if (selectedPieceMap[x, y] != 0) {
-                                selectedPieceMap[x, y] = (int)currentPlayer;
+                                selectedPieceMap[x, y] = (int)currentPlayer.Color;
                             }
                         }
                     }
@@ -127,7 +136,8 @@ public class BlokusMap : MonoBehaviour
                 // Verify the limit of the map
                 if ((coordinate.x > 0 && coordinate.x < NB_COL)
                     && (coordinate.y > 0 && coordinate.y < NB_ROW)
-                    && blokus_map[coordinate.x, coordinate.y] == GROUND_TILE) {
+                    // If the first cell of the piece is empty, then we can skip the groud tile verification on the map 
+                    && (selectedPieceMap[0, 0] == 0 || blokus_map[coordinate.x, coordinate.y] == GROUND_TILE)) {
 
                     // Verify if the piece can be placed
                     bool VerifyPiecePlacement() {
@@ -146,19 +156,19 @@ public class BlokusMap : MonoBehaviour
 
                                 if (selectedPieceMap[x, y] != 0) {
                                     // Verify that the piece is not next to another part
-                                    if (blokus_map[currentCoord.x + 1, currentCoord.y] == (int)currentPlayer ||
-                                        blokus_map[currentCoord.x, currentCoord.y + 1] == (int)currentPlayer ||
-                                        blokus_map[currentCoord.x - 1, currentCoord.y] == (int)currentPlayer ||
-                                        blokus_map[currentCoord.x, currentCoord.y - 1] == (int)currentPlayer) {
+                                    if (blokus_map[currentCoord.x + 1, currentCoord.y] == (int)currentPlayer.Color ||
+                                        blokus_map[currentCoord.x, currentCoord.y + 1] == (int)currentPlayer.Color ||
+                                        blokus_map[currentCoord.x - 1, currentCoord.y] == (int)currentPlayer.Color ||
+                                        blokus_map[currentCoord.x, currentCoord.y - 1] == (int)currentPlayer.Color) {
                                         Debug.Log("Can't place the piece next to another one of the same player");
                                         return false;
                                     }
 
                                     // Verify that the piece is connected to another by it's diagonal
-                                    if (blokus_map[currentCoord.x + 1, currentCoord.y + 1] == (int)currentPlayer ||
-                                        blokus_map[currentCoord.x + 1, currentCoord.y - 1] == (int)currentPlayer ||
-                                        blokus_map[currentCoord.x - 1, currentCoord.y + 1] == (int)currentPlayer ||
-                                        blokus_map[currentCoord.x - 1, currentCoord.y - 1] == (int)currentPlayer) {
+                                    if (blokus_map[currentCoord.x + 1, currentCoord.y + 1] == (int)currentPlayer.Color ||
+                                        blokus_map[currentCoord.x + 1, currentCoord.y - 1] == (int)currentPlayer.Color ||
+                                        blokus_map[currentCoord.x - 1, currentCoord.y + 1] == (int)currentPlayer.Color ||
+                                        blokus_map[currentCoord.x - 1, currentCoord.y - 1] == (int)currentPlayer.Color) {
                                         pieceConnected = true;
                                     }
                                 }
@@ -175,12 +185,16 @@ public class BlokusMap : MonoBehaviour
                             for (int y = 0; y < row; y++) {
                                 if (selectedPieceMap[x, y] != 0) {
                                     Vector3Int v3int = new Vector3Int(coordinate.x + x, coordinate.y + y, 0);
-                                    blokus_map[v3int.x, v3int.y] = (int)currentPlayer;
+                                    blokus_map[v3int.x, v3int.y] = (int)currentPlayer.Color;
                                     tilemap.SetTile(v3int, GetTileOfPlayer(currentPlayer));
                                 }
                             }
                         }
+
+                        currentPlayer.Pieces.RemoveAll(x => x.PrefabPath == currentPiece.PrefabPath);
+                        currentPiece = null;
                         selectedPieceMap = null;
+                        SwitchPlayer();
                         Destroy(previewPiece);
                     }
                 }
@@ -194,26 +208,66 @@ public class BlokusMap : MonoBehaviour
         DisplayPreviewPiece();
     }
 
+    private void SwitchPlayer() {
+        int currentIndex = playerList.IndexOf(currentPlayer);
+        int nextIndex = (currentIndex + 1 < playerList.Count) ? currentIndex + 1 : 0;
+
+        currentPlayer = playerList[nextIndex];
+        DisplayPiecesOfPlayer(currentPlayer);
+    }
+
     private TileBase GetTileOfPlayer(Player player) {
-        switch (player) {
-            case Player.Blue:
+        switch (player.Color) {
+            case BlokusColor.BLUE:
                 return blue_bloc;
-            case Player.Green:
+            case BlokusColor.GREEN:
                 return green_bloc;
-            case Player.Red:
+            case BlokusColor.RED:
                 return red_bloc;
-            case Player.Yellow:
+            case BlokusColor.YELLOW:
                 return yellow_bloc;
             default:
                 return null;
         }
     }
 
+    private void DisplayPiecesOfPlayer(Player player) {
+        foreach (GameObject pieces in currentDisplayedPieces) {
+            Destroy(pieces);
+        }
+        
+        float x = PIECE_START_POS_X;
+        float y = PIECE_START_POS_Y;
+        float rowMaxSizeY = 0;
+
+        foreach (Piece p in player.Pieces) {
+            // Get the components corresponding to the piece
+            GameObject parent = Instantiate(Resources.Load(p.PrefabPath)) as GameObject;
+            BoxCollider2D box2d = parent.GetComponent<BoxCollider2D>();
+            Tilemap tm = parent.GetComponentInChildren<Tilemap>();
+
+            tm.SwapTile(default_bloc, GetTileOfPlayer(currentPlayer));
+            currentDisplayedPieces.Add(parent);
+
+            // Place and scale the piece
+            parent.transform.parent = panel.transform;
+            parent.transform.position = new Vector3(x, y);
+            parent.transform.localScale = new Vector3(PIECE_SCALE, PIECE_SCALE, PIECE_SCALE);
+
+            // Calculate the position of the next piece
+            x += box2d.size.x;
+            rowMaxSizeY = (box2d.size.y > rowMaxSizeY) ? box2d.size.y : rowMaxSizeY;
+
+            if (x > PIECE_MAX_POS_X) {
+                x = PIECE_START_POS_X;
+                y -= rowMaxSizeY;
+                rowMaxSizeY = 0;
+            }
+        }
+    }
+
     private void DisplayPreviewPiece() {
         if (previewPiece != null && selectedPieceMap != null) {
-            // Show visual piece preview [WIP]
-            // Vector2 vec2 = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            // previewPiece.transform.position = new Vector3(vec2.x - 6.1f, vec2.y - 7.8f, 0);
 
             // Change the bloc of the grid to show the real preview
             Vector3Int previewCoordinate = grid.WorldToCell(Camera.main.ScreenToWorldPoint(Input.mousePosition));
@@ -228,7 +282,7 @@ public class BlokusMap : MonoBehaviour
                             && selectedPieceMap[x, y] != 0 && blokus_map[previewCoordinate.x + x, previewCoordinate.y + y] == GROUND_TILE) {
 
                             Vector3Int pos = new Vector3Int(previewCoordinate.x + x, previewCoordinate.y + y, 0);
-                            tilemap.SetTile(pos, preview_green_bloc);
+                            tilemap.SetTile(pos, GetTileOfPlayer(currentPlayer));
                         }
                     }
                 }

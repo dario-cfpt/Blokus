@@ -1,28 +1,15 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-public class Piece_W : Piece
+﻿public class Piece_W : Piece
 {
-    public override int[,] piece_form {
+    public override int[,] PieceForm {
         get {
             return new int[3, 3] {
-                { 1, 0, 0},
-                { 1, 1, 0},
                 { 0, 1, 1},
+                { 1, 1, 0},
+                { 1, 0, 0},
             };
         }
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    public override string PrefabPath { get => "Pieces_Prefab/W"; }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

@@ -1,22 +1,11 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public abstract class Piece : MonoBehaviour
 {
-    public abstract int[,] piece_form {
+    public abstract int[,] PieceForm {
         get;
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    public abstract string PrefabPath { get; }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

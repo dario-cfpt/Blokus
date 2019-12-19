@@ -1,10 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-public class Piece_X : Piece
+﻿public class Piece_X : Piece
 {
-    public override int[,] piece_form {
+    public override int[,] PieceForm {
         get {
             return new int[3, 3] {
                 { 0, 1, 0},
@@ -14,15 +10,6 @@ public class Piece_X : Piece
         }
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    public override string PrefabPath { get => "Pieces_Prefab/X"; }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

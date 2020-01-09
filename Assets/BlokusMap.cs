@@ -128,36 +128,7 @@ public class BlokusMap : MonoBehaviour
                 }
             }
 
-            // Try to place the piece selected
-            if (selectedPieceMap != null) {
-                Vector3Int coordinate = grid.WorldToCell(pos);
-                int col = selectedPieceMap.GetLength(0);
-                int row = selectedPieceMap.GetLength(1);
-
-                if ((coordinate.x > 0 && coordinate.x < NB_COL)
-                && (coordinate.y > 0 && coordinate.y < NB_ROW)) {
-
-                    if (VerifyPiecePlacement(selectedPieceMap, (Vector2Int)coordinate, currentPlayer, true)) {
-                        // Place the piece
-                        for (int x = 0; x < col; x++) {
-                            for (int y = 0; y < row; y++) {
-                                if (selectedPieceMap[x, y] != 0) {
-                                    Vector3Int v3int = new Vector3Int(coordinate.x + x, coordinate.y + y, 0);
-                                    blokus_map[v3int.x, v3int.y] = (int)currentPlayer.Color;
-                                    tilemap.SetTile(v3int, GetTileOfPlayer(currentPlayer));
-                                }
-                            }
-                        }
-
-                        currentPlayer.Pieces.RemoveAll(x => x.PrefabPath == currentPiece.PrefabPath);
-                        currentPiece = null;
-                        selectedPieceMap = null;
-                        CheckSpaceForAllPlayers();
-                        SwitchPlayer();
-                        Destroy(previewPiece);
-                    }
-                }   
-            }
+            PlaceSelectedPiece(pos);
         }
 
         RotateSelectedPiece();
@@ -165,6 +136,44 @@ public class BlokusMap : MonoBehaviour
         RefreshGroundTiles();
 
         DisplayPreviewPiece();
+    }
+
+    /// <summary>
+    /// Try to place the selected piece to the specified position
+    /// </summary>
+    private void PlaceSelectedPiece(Vector3 pos) {
+        if (selectedPieceMap != null) {
+            Vector3Int coordinate = grid.WorldToCell(pos);
+            int col = selectedPieceMap.GetLength(0);
+            int row = selectedPieceMap.GetLength(1);
+
+            // Verify the limit of the map and if the piece can be placed to the selected position
+            if ((coordinate.x > 0 && coordinate.x < NB_COL)
+            && (coordinate.y > 0 && coordinate.y < NB_ROW)
+            && (VerifyPiecePlacement(selectedPieceMap, (Vector2Int)coordinate, currentPlayer, true))) {
+
+                // Place the piece
+                for (int x = 0; x < col; x++) {
+                    for (int y = 0; y < row; y++) {
+                        if (selectedPieceMap[x, y] != 0) {
+                            Vector3Int v3int = new Vector3Int(coordinate.x + x, coordinate.y + y, 0);
+                            blokus_map[v3int.x, v3int.y] = (int)currentPlayer.Color;
+                            tilemap.SetTile(v3int, GetTileOfPlayer(currentPlayer));
+                        }
+                    }
+                }
+
+                // Remove the piece from the user
+                currentPlayer.Pieces.RemoveAll(x => x.PrefabPath == currentPiece.PrefabPath);
+                currentPiece = null;
+                selectedPieceMap = null;
+
+                Destroy(previewPiece);
+                VerifyGameStatus();
+                CheckSpaceForAllPlayers();
+            }
+
+        }
     }
 
     private bool VerifyPiecePlacement(int[,] pieceForm, Vector2Int coordinate, Player player, bool displayLogs = false) {
@@ -220,20 +229,47 @@ public class BlokusMap : MonoBehaviour
         return isConnected();
     }
 
+    private void DisplayFinalScore() {
+        // Clear the view
+        foreach (GameObject pieces in currentDisplayedPieces) {
+            Destroy(pieces);
+        }
+
+        // Display the results
+        Debug.Log("Game is finish!");
+        foreach (Player p in playerList) {
+            Debug.Log(p.Name + " has won!");
+        }
+
+        gameIsFinished = true;
+    }
+
     private void VerifyGameStatus() {
+        bool pieceRemanings = false;
+
+        // The game is finished if there is only one player left
         if (playerList.Count == 1) {
-            gameIsFinished = true;
-            Debug.Log("GAME FINISHED");
-            Debug.Log("Winner : " + playerList[0].Name);
+            DisplayFinalScore();
+        } else {
+            // The game is also finished if all the remainings players have no more pieces.
+            foreach (Player p in playerList) {
+                if (p.Pieces.Count > 0)
+                    pieceRemanings = true;
+            }
+            if (!pieceRemanings) {
+                DisplayFinalScore();
+            }
         }
     }
 
     private void SwitchPlayer() {
-        int currentIndex = playerList.IndexOf(currentPlayer);
-        int nextIndex = (currentIndex + 1 < playerList.Count) ? currentIndex + 1 : 0;
+        if (!gameIsFinished) {
+            int currentIndex = playerList.IndexOf(currentPlayer);
+            int nextIndex = (currentIndex + 1 < playerList.Count) ? currentIndex + 1 : 0;
 
-        currentPlayer = playerList[nextIndex];
-        DisplayPiecesOfPlayer(currentPlayer);
+            currentPlayer = playerList[nextIndex];
+            DisplayPiecesOfPlayer(currentPlayer);
+        }
     }
 
     private TileBase GetTileOfPlayer(Player player) {
@@ -399,16 +435,21 @@ public class BlokusMap : MonoBehaviour
         return dst;
     }
 
+    /// <summary>
+    /// Remove the blocked players from the list, after that switch to the next player
+    /// </summary>
     private void CheckSpaceForAllPlayers() {
         for (int i = playerList.Count - 1; i >= 0; i--) {
             Player p = playerList[i];
-            if (SearchAvailableSpace(p) == false) {
+            if (p.Pieces.Count > 0 && SearchAvailableSpace(p) == false) {
                 Debug.Log("Player " + p.Name + " is blocked !");
                 playerList.Remove(p);
                 blockedPlayers.Add(p);
                 VerifyGameStatus();
             }
         }
+
+        SwitchPlayer();
     }
 
     private bool SearchAvailableSpace(Player player) {
@@ -537,5 +578,4 @@ public class BlokusMap : MonoBehaviour
         return isEqual;
     }
 
-    
 }

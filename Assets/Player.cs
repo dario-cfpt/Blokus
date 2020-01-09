@@ -1,16 +1,15 @@
 ﻿using Assets;
-using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 public class Player
 {
-    public String Name { get; private set; }
+    public string Name { get; private set; }
     public List<Piece> Pieces { get; private set; }
     public BlokusColor Color { get; private set; }
-    public Player(BlokusColor color, String name = "Undefined player") {
-        Color = color;
+
+    public Player(BlokusColor color, string name = "Undefined player") {
         Name = name;
+        Color = color;
         Pieces = new List<Piece>() {
             new Piece_1(),
             new Piece_2(),

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using System.Linq;
 
 public class BlokusMap : MonoBehaviour
 {
@@ -46,19 +47,22 @@ public class BlokusMap : MonoBehaviour
 
     private List<GameObject> currentDisplayedPieces = new List<GameObject>();
     private List<Player> playerList;
+    private List<Player> blockedPlayers = new List<Player>();
     private Player currentPlayer;
     private Piece currentPiece;
+    private bool gameIsFinished = false;
 
     // Use this for initialization
     void Start() {
         TileBase tile;
         int actualTile;
 
-        playerList = new List<Player>();
-        playerList.Add(new Player(BlokusColor.BLUE));
-        playerList.Add(new Player(BlokusColor.GREEN));
-        playerList.Add(new Player(BlokusColor.RED));
-        playerList.Add(new Player(BlokusColor.YELLOW));
+        playerList = new List<Player> {
+            new Player(BlokusColor.BLUE, "Blue"),
+            new Player(BlokusColor.GREEN, "Green"),
+            new Player(BlokusColor.RED, "Red"),
+            new Player(BlokusColor.YELLOW, "Yellow")
+        };
         currentPlayer = playerList[0];
 
         // Create the map
@@ -96,14 +100,13 @@ public class BlokusMap : MonoBehaviour
     // Update is called once per frame
     void Update() {
         // Get coordinate on mouse click
-        if (Input.GetMouseButtonDown(0)) {
+        if (gameIsFinished == false && Input.GetMouseButtonDown(0)) {
             Vector3 pos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
             Vector2 mousePos2d = new Vector2(pos.x, pos.y);
             RaycastHit2D hit = Physics2D.Raycast(mousePos2d, Vector2.zero);
             // Get the value of the piece selected
             if (hit.collider != null) {
-                Debug.Log(hit.collider.gameObject.name);
                 currentPiece = hit.collider.gameObject.GetComponent<Piece>();
 
                 if (previewPiece != null) {
@@ -125,80 +128,7 @@ public class BlokusMap : MonoBehaviour
                 }
             }
 
-            // Try to place the piece selected
-            if (selectedPieceMap != null) {
-                Vector3Int coordinate = grid.WorldToCell(pos);
-                Debug.Log(coordinate);
-
-                int col = selectedPieceMap.GetLength(0);
-                int row = selectedPieceMap.GetLength(1);
-
-                // Verify the limit of the map
-                if ((coordinate.x > 0 && coordinate.x < NB_COL)
-                    && (coordinate.y > 0 && coordinate.y < NB_ROW)
-                    // If the first cell of the piece is empty, then we can skip the groud tile verification on the map 
-                    && (selectedPieceMap[0, 0] == 0 || blokus_map[coordinate.x, coordinate.y] == GROUND_TILE)) {
-
-                    // Verify if the piece can be placed
-                    bool VerifyPiecePlacement() {
-                        bool pieceConnected = false;
-
-                        for (int x = 0; x < col; x++) {
-                            for (int y = 0; y < row; y++) {
-                                Vector2Int currentCoord = new Vector2Int(coordinate.x + x, coordinate.y + y);
-
-                                // Verify the space
-                                if (currentCoord.x >= NB_COL || currentCoord.y >= NB_ROW ||
-                                   (selectedPieceMap[x, y] != 0 && blokus_map[currentCoord.x, currentCoord.y] != GROUND_TILE)) {
-                                    Debug.Log("No space available");
-                                    return false;
-                                }
-
-                                if (selectedPieceMap[x, y] != 0) {
-                                    // Verify that the piece is not next to another part
-                                    if (blokus_map[currentCoord.x + 1, currentCoord.y] == (int)currentPlayer.Color ||
-                                        blokus_map[currentCoord.x, currentCoord.y + 1] == (int)currentPlayer.Color ||
-                                        blokus_map[currentCoord.x - 1, currentCoord.y] == (int)currentPlayer.Color ||
-                                        blokus_map[currentCoord.x, currentCoord.y - 1] == (int)currentPlayer.Color) {
-                                        Debug.Log("Can't place the piece next to another one of the same player");
-                                        return false;
-                                    }
-
-                                    // Verify that the piece is connected to another by it's diagonal
-                                    if (blokus_map[currentCoord.x + 1, currentCoord.y + 1] == (int)currentPlayer.Color ||
-                                        blokus_map[currentCoord.x + 1, currentCoord.y - 1] == (int)currentPlayer.Color ||
-                                        blokus_map[currentCoord.x - 1, currentCoord.y + 1] == (int)currentPlayer.Color ||
-                                        blokus_map[currentCoord.x - 1, currentCoord.y - 1] == (int)currentPlayer.Color) {
-                                        pieceConnected = true;
-                                    }
-                                }
-                            }
-                        }
-                        if (!pieceConnected) Debug.Log("Piece not connected");
-
-                        return pieceConnected;
-                    }
-
-                    if (VerifyPiecePlacement()) {
-                        // Place the piece
-                        for (int x = 0; x < col; x++) {
-                            for (int y = 0; y < row; y++) {
-                                if (selectedPieceMap[x, y] != 0) {
-                                    Vector3Int v3int = new Vector3Int(coordinate.x + x, coordinate.y + y, 0);
-                                    blokus_map[v3int.x, v3int.y] = (int)currentPlayer.Color;
-                                    tilemap.SetTile(v3int, GetTileOfPlayer(currentPlayer));
-                                }
-                            }
-                        }
-
-                        currentPlayer.Pieces.RemoveAll(x => x.PrefabPath == currentPiece.PrefabPath);
-                        currentPiece = null;
-                        selectedPieceMap = null;
-                        SwitchPlayer();
-                        Destroy(previewPiece);
-                    }
-                }
-            }
+            PlaceSelectedPiece(pos);
         }
 
         RotateSelectedPiece();
@@ -208,12 +138,138 @@ public class BlokusMap : MonoBehaviour
         DisplayPreviewPiece();
     }
 
-    private void SwitchPlayer() {
-        int currentIndex = playerList.IndexOf(currentPlayer);
-        int nextIndex = (currentIndex + 1 < playerList.Count) ? currentIndex + 1 : 0;
+    /// <summary>
+    /// Try to place the selected piece to the specified position
+    /// </summary>
+    private void PlaceSelectedPiece(Vector3 pos) {
+        if (selectedPieceMap != null) {
+            Vector3Int coordinate = grid.WorldToCell(pos);
+            int col = selectedPieceMap.GetLength(0);
+            int row = selectedPieceMap.GetLength(1);
 
-        currentPlayer = playerList[nextIndex];
-        DisplayPiecesOfPlayer(currentPlayer);
+            // Verify the limit of the map and if the piece can be placed to the selected position
+            if ((coordinate.x > 0 && coordinate.x < NB_COL)
+            && (coordinate.y > 0 && coordinate.y < NB_ROW)
+            && (VerifyPiecePlacement(selectedPieceMap, (Vector2Int)coordinate, currentPlayer, true))) {
+
+                // Place the piece
+                for (int x = 0; x < col; x++) {
+                    for (int y = 0; y < row; y++) {
+                        if (selectedPieceMap[x, y] != 0) {
+                            Vector3Int v3int = new Vector3Int(coordinate.x + x, coordinate.y + y, 0);
+                            blokus_map[v3int.x, v3int.y] = (int)currentPlayer.Color;
+                            tilemap.SetTile(v3int, GetTileOfPlayer(currentPlayer));
+                        }
+                    }
+                }
+
+                // Remove the piece from the user
+                currentPlayer.Pieces.RemoveAll(x => x.PrefabPath == currentPiece.PrefabPath);
+                currentPiece = null;
+                selectedPieceMap = null;
+
+                Destroy(previewPiece);
+                VerifyGameStatus();
+                CheckSpaceForAllPlayers();
+            }
+
+        }
+    }
+
+    private bool VerifyPiecePlacement(int[,] pieceForm, Vector2Int coordinate, Player player, bool displayLogs = false) {
+        int col = pieceForm.GetLength(0);
+        int row = pieceForm.GetLength(1);
+
+        bool isConnected() {
+            bool pieceConnected = false;
+
+            // Verify the limit of the map
+            if ((coordinate.x > 0 && coordinate.x < NB_COL)
+            && (coordinate.y > 0 && coordinate.y < NB_ROW)
+            // If the first cell of the piece is empty, then we can skip the groud tile verification on the map
+            && (pieceForm[0, 0] == 0 || blokus_map[coordinate.x, coordinate.y] == GROUND_TILE)) {
+                for (int x = 0; x < col; x++) {
+                    for (int y = 0; y < row; y++) {
+                        Vector2Int currentCoord = new Vector2Int(coordinate.x + x, coordinate.y + y);
+
+                        // Verify the space
+                        if (currentCoord.x >= NB_COL || currentCoord.y >= NB_ROW ||
+                           (pieceForm[x, y] != 0 && blokus_map[currentCoord.x, currentCoord.y] != GROUND_TILE)) {
+                            if (displayLogs) Debug.Log("No space available");
+                            return false;
+                        }
+
+                        if (pieceForm[x, y] != 0) {
+                            // Verify that the piece is not next to another part
+                            if (blokus_map[currentCoord.x + 1, currentCoord.y] == (int)player.Color ||
+                                blokus_map[currentCoord.x, currentCoord.y + 1] == (int)player.Color ||
+                                blokus_map[currentCoord.x - 1, currentCoord.y] == (int)player.Color ||
+                                blokus_map[currentCoord.x, currentCoord.y - 1] == (int)player.Color) {
+                                if (displayLogs) Debug.Log("Can't place the piece next to another one of the same player");
+                                return false;
+                            }
+
+                            // Verify that the piece is connected to another by it's diagonal
+                            if (blokus_map[currentCoord.x + 1, currentCoord.y + 1] == (int)player.Color ||
+                                blokus_map[currentCoord.x + 1, currentCoord.y - 1] == (int)player.Color ||
+                                blokus_map[currentCoord.x - 1, currentCoord.y + 1] == (int)player.Color ||
+                                blokus_map[currentCoord.x - 1, currentCoord.y - 1] == (int)player.Color) {
+                                pieceConnected = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (displayLogs && !pieceConnected) Debug.Log("Piece not connected");
+
+            return pieceConnected;
+        }
+
+        return isConnected();
+    }
+
+    private void DisplayFinalScore() {
+        // Clear the view
+        foreach (GameObject pieces in currentDisplayedPieces) {
+            Destroy(pieces);
+        }
+
+        // Display the results
+        Debug.Log("Game is finish!");
+        foreach (Player p in playerList) {
+            Debug.Log(p.Name + " has won!");
+        }
+
+        gameIsFinished = true;
+    }
+
+    private void VerifyGameStatus() {
+        bool pieceRemanings = false;
+
+        // The game is finished if there is only one player left
+        if (playerList.Count == 1) {
+            DisplayFinalScore();
+        } else {
+            // The game is also finished if all the remainings players have no more pieces.
+            foreach (Player p in playerList) {
+                if (p.Pieces.Count > 0)
+                    pieceRemanings = true;
+            }
+            if (!pieceRemanings) {
+                DisplayFinalScore();
+            }
+        }
+    }
+
+    private void SwitchPlayer() {
+        if (!gameIsFinished) {
+            int currentIndex = playerList.IndexOf(currentPlayer);
+            int nextIndex = (currentIndex + 1 < playerList.Count) ? currentIndex + 1 : 0;
+
+            currentPlayer = playerList[nextIndex];
+            DisplayPiecesOfPlayer(currentPlayer);
+        }
     }
 
     private TileBase GetTileOfPlayer(Player player) {
@@ -235,7 +291,7 @@ public class BlokusMap : MonoBehaviour
         foreach (GameObject pieces in currentDisplayedPieces) {
             Destroy(pieces);
         }
-        
+
         float x = PIECE_START_POS_X;
         float y = PIECE_START_POS_Y;
         float rowMaxSizeY = 0;
@@ -309,7 +365,7 @@ public class BlokusMap : MonoBehaviour
     }
 
     /// <summary>
-    /// Rotate the selected piece when the user press the right or left arrow key
+    /// Turn or flip the selected piece according to the input of the user
     /// </summary>
     private void RotateSelectedPiece() {
         // TODO: create options to configure shortcuts
@@ -378,4 +434,148 @@ public class BlokusMap : MonoBehaviour
 
         return dst;
     }
+
+    /// <summary>
+    /// Remove the blocked players from the list, after that switch to the next player
+    /// </summary>
+    private void CheckSpaceForAllPlayers() {
+        for (int i = playerList.Count - 1; i >= 0; i--) {
+            Player p = playerList[i];
+            if (p.Pieces.Count > 0 && SearchAvailableSpace(p) == false) {
+                Debug.Log("Player " + p.Name + " is blocked !");
+                playerList.Remove(p);
+                blockedPlayers.Add(p);
+                VerifyGameStatus();
+            }
+        }
+
+        SwitchPlayer();
+    }
+
+    private bool SearchAvailableSpace(Player player) {
+        for (int x = 0; x < NB_COL; x++) {
+            for (int y = 0; y < NB_ROW; y++) {
+                if (blokus_map[x, y] == (int)player.Color) {
+                    if (x + 1 < NB_COL && y + 1 < NB_COL) {
+                        if (HasSpaceForAnyPieceVariant(new Vector2Int(x + 1, y + 1), player)) {
+                            return true;
+                        }
+                    }
+                    if (x + 1 < NB_COL && y - 1 > 0) {
+                        if (HasSpaceForAnyPieceVariant(new Vector2Int(x + 1, y - 1), player)) {
+                            return true;
+                        }
+                    }
+                    if (x - 1 > 0 && y + 1 < NB_COL) {
+                        if (HasSpaceForAnyPieceVariant(new Vector2Int(x - 1, y + 1), player)) {
+                            return true;
+                        }
+                    }
+                    if (x - 1 > 0 && y - 1 > 0) {
+                        if (HasSpaceForAnyPieceVariant(new Vector2Int(x - 1, y - 1), player)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private bool HasSpaceForAnyPieceVariant(Vector2Int coordinate, Player player) {
+        bool spaceAvailable = false;
+
+        foreach (Piece piece in player.Pieces) {
+            List<int[,]> mapsVariants = GenerateAllMapVariant(piece.PieceForm);
+
+            foreach (int[,] pieceForm in mapsVariants) {
+                int col = pieceForm.GetLength(0);
+                int row = pieceForm.GetLength(1);
+
+                spaceAvailable = VerifyPiecePlacement(pieceForm, coordinate, player);
+
+                if (spaceAvailable) {
+                    return spaceAvailable;
+                } else {
+                    // To verify all possible placement of the piece we have to change the coordinate according to its size
+                    int maxSize = (col > row) ? col : row;
+                    for (int i = 1; i <= maxSize; i++) {
+                        if (VerifyPiecePlacement(pieceForm, new Vector2Int(coordinate.x + i, coordinate.y), player)
+                        || VerifyPiecePlacement(pieceForm, new Vector2Int(coordinate.x - i, coordinate.y), player)
+                        || VerifyPiecePlacement(pieceForm, new Vector2Int(coordinate.x, coordinate.y + i), player)
+                        || VerifyPiecePlacement(pieceForm, new Vector2Int(coordinate.x, coordinate.y - i), player)
+                        || VerifyPiecePlacement(pieceForm, new Vector2Int(coordinate.x + i, coordinate.y + i), player)
+                        || VerifyPiecePlacement(pieceForm, new Vector2Int(coordinate.x + i, coordinate.y - i), player)
+                        || VerifyPiecePlacement(pieceForm, new Vector2Int(coordinate.x - i, coordinate.y + i), player)
+                        || VerifyPiecePlacement(pieceForm, new Vector2Int(coordinate.x - i, coordinate.y - i), player)) {
+                            spaceAvailable = true;
+                            return spaceAvailable;
+                        }
+                    }
+                }
+            }
+        }
+
+        return spaceAvailable;
+    }
+
+    private List<int[,]> GenerateAllMapVariant(int[,] originalMap) {
+        const int NB_ROTATED_VARIANT = 3; // We don't count the original as a variant
+        List<int[,]> mapsVariants = new List<int[,]> {
+            originalMap,
+        };
+        int[,] reversedOriginalMap = ReversePiece(originalMap);
+
+        if (!CheckIfArraysAreEquals(originalMap, reversedOriginalMap)) {
+            mapsVariants.Add(reversedOriginalMap);
+        }
+
+        // Start at 1 because we have to rotate the piece at least one time
+        for (int i = 1; i <= NB_ROTATED_VARIANT; i++) {
+            int[,] mapVariant = RotatePiece(originalMap, true, i);
+            int[,] reversedMapVariant = ReversePiece(mapVariant);
+            bool duplicateVariant = false;
+            bool duplicateReversedVariant = false;
+
+            foreach (int[,] map in mapsVariants) {
+                if (CheckIfArraysAreEquals(map, mapVariant)) {
+                    duplicateVariant = true;
+                    break;
+                }
+            }
+
+            if (!duplicateVariant)
+                mapsVariants.Add(mapVariant);
+
+            foreach (int[,] map in mapsVariants) {
+                if (CheckIfArraysAreEquals(map, reversedMapVariant)) {
+                    duplicateReversedVariant = true;
+                    break;
+                }
+            }
+
+            if (!duplicateReversedVariant)
+                mapsVariants.Add(reversedMapVariant);
+
+        }
+
+        return mapsVariants;
+    }
+
+    /// <summary>
+    /// Compare two array to check if they're the same
+    /// <para>
+    /// Source : https://stackoverflow.com/a/12446807
+    /// </para> 
+    /// </summary>
+    /// <returns>Return true if the sources are the same</returns>
+    private bool CheckIfArraysAreEquals(int[,] source1, int[,] source2) {
+        bool isEqual =
+           source1.Rank == source2.Rank &&
+           Enumerable.Range(0, source1.Rank).All(dimension => source1.GetLength(dimension) == source2.GetLength(dimension)) &&
+           source1.Cast<int>().SequenceEqual(source2.Cast<int>());
+
+        return isEqual;
+    }
+
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using System.Linq;
+using TMPro;
 
 public class BlokusMap : MonoBehaviour
 {
@@ -12,8 +13,8 @@ public class BlokusMap : MonoBehaviour
 
     private const float PIECE_SCALE = 28.7334f;
     private const float PIECE_START_POS_X = -13.8f;
-    private const float PIECE_START_POS_Y = -1.9f;
-    private const float PIECE_MAX_POS_X = -8.3f;
+    private const float PIECE_START_POS_Y = 0f;
+    private const float PIECE_MAX_POS_X = -7.8f;
 
     public Grid grid;
     public GameObject panel;
@@ -30,6 +31,11 @@ public class BlokusMap : MonoBehaviour
     public TileBase preview_red_bloc;
     public TileBase preview_yellow_bloc;
 
+    public TextMeshProUGUI LabelPlayerBlue;
+    public TextMeshProUGUI LabelPlayerGreen;
+    public TextMeshProUGUI LabelPlayerRed;
+    public TextMeshProUGUI LabelPlayerYellow;
+
     private const int GROUND_TILE = 0;
     private const int WALL_TILE = 1;
     private const int BLUE_TILE = (int)BlokusColor.BLUE;
@@ -43,7 +49,6 @@ public class BlokusMap : MonoBehaviour
     private readonly Vector3Int START_POSITION_YELLOW = new Vector3Int(NB_COL - 1, 0, 0);
 
     private int[,] selectedPieceMap = null;
-    private GameObject previewPiece;
 
     private List<GameObject> currentDisplayedPieces = new List<GameObject>();
     private List<Player> playerList;
@@ -63,6 +68,31 @@ public class BlokusMap : MonoBehaviour
             new Player(BlokusColor.RED, "Red"),
             new Player(BlokusColor.YELLOW, "Yellow")
         };
+        playerList = PlayerList.Players;
+
+        foreach (Player p in playerList) {
+            switch (p.Color) {
+                case BlokusColor.BLUE:
+                    LabelPlayerBlue.text = p.Name;
+                    LabelPlayerBlue.enabled = true;
+                    break;
+                case BlokusColor.GREEN:
+                    LabelPlayerGreen.text = p.Name;
+                    LabelPlayerGreen.enabled = true;
+                    break;
+                case BlokusColor.RED:
+                    LabelPlayerRed.text = p.Name;
+                    LabelPlayerRed.enabled = true;
+                    break;
+                case BlokusColor.YELLOW:
+                    LabelPlayerYellow.text = p.Name;
+                    LabelPlayerYellow.enabled = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
         currentPlayer = playerList[0];
 
         // Create the map
@@ -108,12 +138,6 @@ public class BlokusMap : MonoBehaviour
             // Get the value of the piece selected
             if (hit.collider != null) {
                 currentPiece = hit.collider.gameObject.GetComponent<Piece>();
-
-                if (previewPiece != null) {
-                    // Destroy the previous piece to avoid multiple clone
-                    Destroy(previewPiece);
-                }
-                previewPiece = Instantiate(hit.collider.gameObject, panel.transform);
 
                 if (currentPiece != null) {
                     selectedPieceMap = currentPiece.PieceForm;
@@ -168,7 +192,6 @@ public class BlokusMap : MonoBehaviour
                 currentPiece = null;
                 selectedPieceMap = null;
 
-                Destroy(previewPiece);
                 VerifyGameStatus();
                 CheckSpaceForAllPlayers();
             }
@@ -323,7 +346,7 @@ public class BlokusMap : MonoBehaviour
     }
 
     private void DisplayPreviewPiece() {
-        if (previewPiece != null && selectedPieceMap != null) {
+        if (selectedPieceMap != null) {
 
             // Change the bloc of the grid to show the real preview
             Vector3Int previewCoordinate = grid.WorldToCell(Camera.main.ScreenToWorldPoint(Input.mousePosition));

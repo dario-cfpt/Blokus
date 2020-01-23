@@ -7,9 +7,15 @@ public class Player
     public List<Piece> Pieces { get; private set; }
     public BlokusColor Color { get; private set; }
 
+    public int Score { get; set; }
+
+    public bool IsBlocked { get; set; }
+
     public Player(BlokusColor color, string name = "Undefined player") {
         Name = name;
         Color = color;
+        IsBlocked = false;
+
         Pieces = new List<Piece>() {
             new Piece_1(),
             new Piece_2(),
@@ -33,6 +39,14 @@ public class Player
             new Piece_Z(),
             new Piece_Z_Short(),
         };
+    }
+
+    public bool CanPlay() {
+        if (Pieces.Count > 0 && !IsBlocked) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
 }

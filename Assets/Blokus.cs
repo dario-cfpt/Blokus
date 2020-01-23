@@ -14,8 +14,10 @@ public class Blokus : MonoBehaviour
     private const float PIECE_START_POS_X = -13.8f;
     private const float PIECE_START_POS_Y = 0f;
     private const float PIECE_MAX_POS_X = -7.8f;
-    private const float LABEL_PLAYER_NAME_START_POS_X = 10f;
-    private const float LABEL_PLAYER_NAME_START_POS_Y = 7f;
+    private const float PLAYER_INFO_START_POS_X = -2f;
+    private const float PLAYER_INFO_START_POS_Y = 0f;
+    private const float PLAYER_INFO_Y_SPACING_MULTIPLIER = 2.5f;
+    private const float PLAYER_INFO_SCALE = 1;
 
     public Grid MainGrid;
     public GameObject MainPanel;
@@ -32,10 +34,7 @@ public class Blokus : MonoBehaviour
     public TileBase PreviewGreenBlock;
     public TileBase PreviewRedBlock;
     public TileBase PreviewYellowBlock;
-    public TextMeshProUGUI LabelPlayerBlue;
-    public TextMeshProUGUI LabelPlayerGreen;
-    public TextMeshProUGUI LabelPlayerRed;
-    public TextMeshProUGUI LabelPlayerYellow;
+    public GameObject PlayerInfo;
 
     private const int GROUND_TILE = 0;
     private const int WALL_TILE = 1;
@@ -43,6 +42,13 @@ public class Blokus : MonoBehaviour
     private const int GREEN_TILE = (int)BlokusColor.GREEN;
     private const int RED_TILE = (int)BlokusColor.RED;
     private const int YELLOW_TILE = (int)BlokusColor.YELLOW;
+
+    private const string PLAYER_INFO_NAME_COMPONENT_NAME = "Player name";
+    private const string PLAYER_INFO_STATUS_COMPONENT_NAME = "Player status";
+
+    private const string STATUS_PLAYING = "playing...";
+    private const string STATUS_BLOCKED = "BLOCKED!";
+    private const string STATUS_WINNER = "WINNER!!";
 
     private readonly Vector3Int START_POSITION_BLUE = new Vector3Int(0, 0, 0);
     private readonly Vector3Int START_POSITION_GREEN = new Vector3Int(0, NB_ROW - 1, 0);
@@ -53,7 +59,7 @@ public class Blokus : MonoBehaviour
 
     private List<GameObject> currentDisplayedPieces = new List<GameObject>();
     private List<Player> playerList = new List<Player>();
-    private List<Player> blockedPlayers = new List<Player>();
+    private List<GameObject> playerInfoList = new List<GameObject>();
     private Player currentPlayer;
     private Piece currentPiece;
     private bool gameIsFinished = false;
@@ -81,34 +87,42 @@ public class Blokus : MonoBehaviour
         playerList = PlayerList.Players;
 
         for (int i = 0; i < playerList.Count; i++) {
-            Player p = playerList[i];
-            float x = LABEL_PLAYER_NAME_START_POS_X;
-            float y = LABEL_PLAYER_NAME_START_POS_Y - i * 3;
+            float x = PLAYER_INFO_START_POS_X;
+            float y = PLAYER_INFO_START_POS_Y - i * PLAYER_INFO_Y_SPACING_MULTIPLIER;
             Vector3 pos = new Vector3(x, y);
+            Player p = playerList[i];
+            GameObject playerInfo = Instantiate(PlayerInfo);
+            TextMeshProUGUI playerName = playerInfo.transform.Find(PLAYER_INFO_NAME_COMPONENT_NAME).GetComponent<TextMeshProUGUI>();
+            TextMeshProUGUI playerStatus = playerInfo.transform.Find(PLAYER_INFO_STATUS_COMPONENT_NAME).GetComponent<TextMeshProUGUI>();
 
-            switch (p.Color) {
-                case BlokusColor.BLUE:
-                    LabelPlayerBlue.text = p.Name;
-                    LabelPlayerBlue.enabled = true;
-                    LabelPlayerBlue.transform.position = pos;
-                    break;
-                case BlokusColor.GREEN:
-                    LabelPlayerGreen.text = p.Name;
-                    LabelPlayerGreen.enabled = true;
-                    LabelPlayerGreen.transform.position = pos;
-                    break;
-                case BlokusColor.RED:
-                    LabelPlayerRed.text = p.Name;
-                    LabelPlayerRed.enabled = true;
-                    LabelPlayerRed.transform.position = pos;
-                    break;
-                case BlokusColor.YELLOW:
-                    LabelPlayerYellow.text = p.Name;
-                    LabelPlayerYellow.enabled = true;
-                    LabelPlayerYellow.transform.position = pos;
-                    break;
-                default:
-                    break;
+            playerInfoList.Add(playerInfo);
+            playerName.text = p.Name;
+            playerInfo.transform.parent = MainPanel.transform.parent;
+            playerInfo.transform.position = pos;
+            playerInfo.transform.localScale = new Vector3(PLAYER_INFO_SCALE, PLAYER_INFO_SCALE, PLAYER_INFO_SCALE);
+
+            foreach (TextMeshProUGUI text in playerInfo.GetComponentsInChildren<TextMeshProUGUI>()) {
+                switch (p.Color) {
+                    case BlokusColor.BLUE:
+                        text.color = Color.blue;
+                        break;
+                    case BlokusColor.GREEN:
+                        text.color = Color.green;
+                        break;
+                    case BlokusColor.RED:
+                        text.color = Color.red;
+                        break;
+                    case BlokusColor.YELLOW:
+                        text.color = Color.yellow;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if (i == 0) {
+                playerStatus.text = STATUS_PLAYING;
+                playerStatus.enabled = true;
             }
         }
 
@@ -272,30 +286,38 @@ public class Blokus : MonoBehaviour
     }
 
     private void VerifyGameStatus() {
-        bool pieceRemanings = false;
-
-        // The game is finished if there is only one player left
-        if (playerList.Count == 1) {
+        // The game is finished if there is one or less player can still play
+        if (playerList.FindAll(x => x.CanPlay() == true).Count <= 1) {
             DisplayFinalScore();
-        } else {
-            // The game is also finished if all the remainings players have no more pieces.
-            foreach (Player p in playerList) {
-                if (p.Pieces.Count > 0)
-                    pieceRemanings = true;
-            }
-            if (!pieceRemanings) {
-                DisplayFinalScore();
-            }
         }
     }
 
     private void SwitchPlayer() {
         if (!gameIsFinished) {
-            int currentIndex = playerList.IndexOf(currentPlayer);
-            int nextIndex = (currentIndex + 1 < playerList.Count) ? currentIndex + 1 : 0;
+            GameObject currentPlayerInfo;
+            TextMeshProUGUI currentPlayerStatus;
 
-            currentPlayer = playerList[nextIndex];
+            int currentIndex = playerList.IndexOf(currentPlayer);
+            if (currentPlayer.CanPlay()) {
+                // Hide the status of the last player if he can stil play
+                currentPlayerInfo = playerInfoList[currentIndex];
+                currentPlayerStatus = currentPlayerInfo.transform.Find(PLAYER_INFO_STATUS_COMPONENT_NAME).GetComponent<TextMeshProUGUI>();
+                currentPlayerStatus.enabled = false;
+            }
+
+            currentIndex = GetNextPlayerWhoCanPlay();
+            if (currentIndex == -1) {
+                return;
+            }
+
+            currentPlayerInfo = playerInfoList[currentIndex];
+            currentPlayerStatus = currentPlayerInfo.transform.Find(PLAYER_INFO_STATUS_COMPONENT_NAME).GetComponent<TextMeshProUGUI>();
+            currentPlayerStatus.enabled = true;
+            currentPlayerStatus.text = STATUS_PLAYING;
+
+            currentPlayer = playerList[currentIndex];
             DisplayPiecesOfPlayer(currentPlayer);
+
         }
     }
 
@@ -403,15 +425,19 @@ public class Blokus : MonoBehaviour
     }
 
     /// <summary>
-    /// Remove the blocked players from the list, after that switch to the next player
+    /// Verify all player if they can still play, then switch to the next player who can play
     /// </summary>
     private void CheckSpaceForAllPlayers() {
         for (int i = playerList.Count - 1; i >= 0; i--) {
             Player p = playerList[i];
-            if (p.Pieces.Count > 0 && SearchAvailableSpace(p) == false) {
-                Debug.Log("Player " + p.Name + " is blocked !");
-                playerList.Remove(p);
-                blockedPlayers.Add(p);
+            if (p.CanPlay() && SearchAvailableSpace(p) == false) {
+                GameObject playerInfo = playerInfoList[i];
+                TextMeshProUGUI playerStatus = playerInfo.transform.Find(PLAYER_INFO_STATUS_COMPONENT_NAME).GetComponent<TextMeshProUGUI>();
+                playerStatus.text = STATUS_BLOCKED;
+                playerStatus.enabled = true;
+
+                playerList[i].IsBlocked = true;
+
                 VerifyGameStatus();
             }
         }
@@ -487,6 +513,25 @@ public class Blokus : MonoBehaviour
         return spaceAvailable;
     }
 
+    private int GetNextPlayerWhoCanPlay() {
+        int previousIndex = playerList.IndexOf(currentPlayer);
+        int currentIndex = (previousIndex + 1 < playerList.Count) ? previousIndex + 1 : 0;
+
+        for (int i = 0; i < playerList.Count; i++) {
+            if (playerList[currentIndex].CanPlay()) {
+                break;
+            }
+            currentIndex = (currentIndex + 1 < playerList.Count) ? currentIndex + 1 : 0;
+        }
+
+        if (currentIndex == previousIndex) {
+            // If the next player is the same as the previous one then the game is normally over.
+            VerifyGameStatus();
+            return -1;
+        }
+        return currentIndex;
+    }
+
     private void DisplayFinalScore() {
         // Clear the view
         foreach (GameObject pieces in currentDisplayedPieces) {
@@ -496,7 +541,13 @@ public class Blokus : MonoBehaviour
         // Display the results
         Debug.Log("Game is finish!");
         foreach (Player p in playerList) {
-            Debug.Log(p.Name + " has won!");
+            if (p.IsBlocked) {
+                int currentIndex = playerList.IndexOf(p);
+                GameObject currentPlayerInfo = playerInfoList[currentIndex];
+                TextMeshProUGUI currentPlayerStatus = currentPlayerInfo.transform.Find(PLAYER_INFO_STATUS_COMPONENT_NAME).GetComponent<TextMeshProUGUI>();
+                currentPlayerStatus.enabled = true;
+                currentPlayerStatus.text = STATUS_WINNER;
+            }
         }
 
         gameIsFinished = true;

@@ -15,10 +15,13 @@ public class BlokusMap : MonoBehaviour
     private const float PIECE_START_POS_X = -13.8f;
     private const float PIECE_START_POS_Y = 0f;
     private const float PIECE_MAX_POS_X = -7.8f;
+    private const float LABEL_PLAYER_NAME_START_POS_X = 10f;
+    private const float LABEL_PLAYER_NAME_START_POS_Y = 7f;
 
     public Grid grid;
     public GameObject panel;
     public Tilemap tilemap;
+    public Tilemap PreviewTilemap;
     public TileBase ground;
     public TileBase wall;
     public TileBase default_bloc;
@@ -62,31 +65,34 @@ public class BlokusMap : MonoBehaviour
         TileBase tile;
         int actualTile;
 
-        playerList = new List<Player> {
-            new Player(BlokusColor.BLUE, "Blue"),
-            new Player(BlokusColor.GREEN, "Green"),
-            new Player(BlokusColor.RED, "Red"),
-            new Player(BlokusColor.YELLOW, "Yellow")
-        };
         playerList = PlayerList.Players;
 
-        foreach (Player p in playerList) {
+        for (int i = 0; i < playerList.Count; i++) {
+            Player p = playerList[i];
+            float x = LABEL_PLAYER_NAME_START_POS_X;
+            float y = LABEL_PLAYER_NAME_START_POS_Y - i * 3;
+            Vector3 pos = new Vector3(x, y);
+
             switch (p.Color) {
                 case BlokusColor.BLUE:
                     LabelPlayerBlue.text = p.Name;
                     LabelPlayerBlue.enabled = true;
+                    LabelPlayerBlue.transform.position = pos;
                     break;
                 case BlokusColor.GREEN:
                     LabelPlayerGreen.text = p.Name;
                     LabelPlayerGreen.enabled = true;
+                    LabelPlayerGreen.transform.position = pos;
                     break;
                 case BlokusColor.RED:
                     LabelPlayerRed.text = p.Name;
                     LabelPlayerRed.enabled = true;
+                    LabelPlayerRed.transform.position = pos;
                     break;
                 case BlokusColor.YELLOW:
                     LabelPlayerYellow.text = p.Name;
                     LabelPlayerYellow.enabled = true;
+                    LabelPlayerYellow.transform.position = pos;
                     break;
                 default:
                     break;
@@ -363,6 +369,7 @@ public class BlokusMap : MonoBehaviour
                             Vector3Int pos = new Vector3Int(previewCoordinate.x + x, previewCoordinate.y + y, 0);
                             tilemap.SetTile(pos, GetTileOfPlayer(currentPlayer));
                         }
+                        PreviewTilemap.SetTile(new Vector3Int(23 + x, 1 + y, 0), GetTileOfPlayer(currentPlayer));
                     }
                 }
             }
@@ -385,6 +392,7 @@ public class BlokusMap : MonoBehaviour
                 }
             }
         }
+        PreviewTilemap.ClearAllTiles();
     }
 
     /// <summary>

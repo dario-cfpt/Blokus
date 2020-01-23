@@ -27,9 +27,9 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 28.938778, y: 28.938778, z: 28.938778}
   m_Children:
-  - {fileID: 5343075899621150303}
   - {fileID: 6419893630940425398}
   - {fileID: 64496185073199202}
+  - {fileID: 5343075899621150303}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -165,13 +165,13 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_textInfo:
     textComponent: {fileID: 8587877076245194182}
-    characterCount: 1
+    characterCount: 0
     spriteCount: 0
     spaceCount: 0
-    wordCount: 1
+    wordCount: 0
     linkCount: 0
-    lineCount: 1
-    pageCount: 1
+    lineCount: 0
+    pageCount: 0
     materialCount: 1
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
@@ -268,7 +268,7 @@ RectTransform:
   m_LocalScale: {x: 0.03455571, y: 0.03455571, z: 0.03455571}
   m_Children: []
   m_Father: {fileID: 5875940088348104380}
-  m_RootOrder: 1
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -347,7 +347,7 @@ RectTransform:
   m_Children:
   - {fileID: 8528703079950819223}
   m_Father: {fileID: 5875940088348104380}
-  m_RootOrder: 2
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -618,13 +618,13 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_textInfo:
     textComponent: {fileID: 349355816595598030}
-    characterCount: 14
+    characterCount: 0
     spriteCount: 0
-    spaceCount: 1
-    wordCount: 2
+    spaceCount: 0
+    wordCount: 0
     linkCount: 0
-    lineCount: 1
-    pageCount: 1
+    lineCount: 0
+    pageCount: 0
     materialCount: 1
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
@@ -691,7 +691,7 @@ PrefabInstance:
     - target: {fileID: 189873128699886885, guid: 7e8cf56f78581c34aad71039c0f53deb,
         type: 3}
       propertyPath: m_RootOrder
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 189873128699886885, guid: 7e8cf56f78581c34aad71039c0f53deb,
         type: 3}
@@ -782,6 +782,26 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Options.m_Options.Array.data[2].m_Text
       value: Red
+      objectReference: {fileID: 0}
+    - target: {fileID: 339660472432965760, guid: 7e8cf56f78581c34aad71039c0f53deb,
+        type: 3}
+      propertyPath: m_textInfo.characterCount
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 339660472432965760, guid: 7e8cf56f78581c34aad71039c0f53deb,
+        type: 3}
+      propertyPath: m_textInfo.wordCount
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 339660472432965760, guid: 7e8cf56f78581c34aad71039c0f53deb,
+        type: 3}
+      propertyPath: m_textInfo.lineCount
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 339660472432965760, guid: 7e8cf56f78581c34aad71039c0f53deb,
+        type: 3}
+      propertyPath: m_textInfo.pageCount
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7e8cf56f78581c34aad71039c0f53deb, type: 3}

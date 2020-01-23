@@ -1438,22 +1438,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc1051ab9ca4dfe44b6733bd6857976e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  grid: {fileID: 1537548696}
-  panel: {fileID: 333403363}
-  tilemap: {fileID: 2041757647}
+  MainGrid: {fileID: 1537548696}
+  MainPanel: {fileID: 333403363}
+  MainTilemap: {fileID: 2041757647}
   PreviewTilemap: {fileID: 1050773460}
-  ground: {fileID: 11400000, guid: a0c1fc72f2e1e424d9a4d415fd11c13d, type: 2}
-  wall: {fileID: 11400000, guid: bb12ace0ee88d2e4cba11b8fee6c75a5, type: 2}
-  default_bloc: {fileID: 11400000, guid: ccf813a4f85aa9c46922302614a52d44, type: 2}
-  blue_bloc: {fileID: 11400000, guid: 16bd3695b8901d14e835e9883fdd2691, type: 2}
-  green_bloc: {fileID: 11400000, guid: b96d56261cc46984dae32f60aaa2ed07, type: 2}
-  red_bloc: {fileID: 11400000, guid: 39ed4c1836022c449acd33a1bda39f96, type: 2}
-  yellow_bloc: {fileID: 11400000, guid: a2e1969f6a953d043b6363b254faafd4, type: 2}
-  preview_blue_bloc: {fileID: 11400000, guid: 6437b9a6e6b18964bb8a552d0f28e06d, type: 2}
-  preview_green_bloc: {fileID: 11400000, guid: 18bf42fbd977e0149babca333102c1ed, type: 2}
-  preview_red_bloc: {fileID: 11400000, guid: 713c760af0e705b4e8e549fd8fac8c59, type: 2}
-  preview_yellow_bloc: {fileID: 11400000, guid: f1b18bb02cee18c49bece149bf9014b1,
-    type: 2}
+  Ground: {fileID: 11400000, guid: a0c1fc72f2e1e424d9a4d415fd11c13d, type: 2}
+  Wall: {fileID: 11400000, guid: bb12ace0ee88d2e4cba11b8fee6c75a5, type: 2}
+  DefaultBlock: {fileID: 11400000, guid: ccf813a4f85aa9c46922302614a52d44, type: 2}
+  BlueBlock: {fileID: 11400000, guid: 16bd3695b8901d14e835e9883fdd2691, type: 2}
+  GreenBlock: {fileID: 11400000, guid: b96d56261cc46984dae32f60aaa2ed07, type: 2}
+  RedBlock: {fileID: 11400000, guid: 39ed4c1836022c449acd33a1bda39f96, type: 2}
+  YellowBlock: {fileID: 11400000, guid: a2e1969f6a953d043b6363b254faafd4, type: 2}
+  PreviewBlueBlock: {fileID: 11400000, guid: 6437b9a6e6b18964bb8a552d0f28e06d, type: 2}
+  PreviewGreenBlock: {fileID: 11400000, guid: 18bf42fbd977e0149babca333102c1ed, type: 2}
+  PreviewRedBlock: {fileID: 11400000, guid: 713c760af0e705b4e8e549fd8fac8c59, type: 2}
+  PreviewYellowBlock: {fileID: 11400000, guid: f1b18bb02cee18c49bece149bf9014b1, type: 2}
   LabelPlayerBlue: {fileID: 265567472}
   LabelPlayerGreen: {fileID: 159246817}
   LabelPlayerRed: {fileID: 1095357376}

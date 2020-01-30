@@ -28,6 +28,7 @@ public class PlayerSelection : MonoBehaviour
     public Dropdown DropdownNbPlayers;
     public Canvas CanvasParent;
     public Button StartButton;
+    public Button ExitButton;
 
     // Start is called before the first frame update
     void Start() {
@@ -35,6 +36,9 @@ public class PlayerSelection : MonoBehaviour
 
         StartButton.onClick.AddListener(delegate {
             StartGameOnClick();
+        });
+        ExitButton.onClick.AddListener(delegate {
+            Application.Quit();
         });
         DropdownNbPlayers.onValueChanged.AddListener(delegate {
             ChangeNbPlayerOnDropdownValueChanged(DropdownNbPlayers);

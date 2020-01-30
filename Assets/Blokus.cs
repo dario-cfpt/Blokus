@@ -37,6 +37,7 @@ public class Blokus : MonoBehaviour
     public TileBase PreviewRedBlock;
     public TileBase PreviewYellowBlock;
     public GameObject PlayerInfo;
+    public GameObject ListPlayerInfo;
 
     private const int GROUND_TILE = 0;
     private const int WALL_TILE = 1;
@@ -103,7 +104,7 @@ public class Blokus : MonoBehaviour
 
             playerInfoList.Add(playerInfo);
             playerName.text = p.Name;
-            playerInfo.transform.parent = MainPanel.transform.parent;
+            playerInfo.transform.parent = ListPlayerInfo.transform;
             playerInfo.transform.position = pos;
             playerInfo.transform.localScale = new Vector3(PLAYER_INFO_SCALE, PLAYER_INFO_SCALE, PLAYER_INFO_SCALE);
 

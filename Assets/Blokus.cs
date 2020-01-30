@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using TMPro;
+using System.Linq;
 
 public class Blokus : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class Blokus : MonoBehaviour
     private const int NB_ROW = 22;
     public readonly int[,] BlokusMap = new int[NB_COL, NB_ROW];
 
+    private const int TOTAL_NB_PIECE = 21;
     private const float PIECE_SCALE = 28.7334f;
     private const float PIECE_START_POS_X = -13.8f;
     private const float PIECE_START_POS_Y = 0f;
@@ -45,6 +47,8 @@ public class Blokus : MonoBehaviour
 
     private const string PLAYER_INFO_NAME_COMPONENT_NAME = "Player name";
     private const string PLAYER_INFO_STATUS_COMPONENT_NAME = "Player status";
+    private const string PLAYER_INFO_SCORE_COMPONENT_NAME = "Score value";
+    private const string PLAYER_INFO_RANK_COMPONENT_NAME = "Player rank";
 
     private const string STATUS_PLAYING = "playing...";
     private const string STATUS_BLOCKED = "BLOCKED!";
@@ -83,9 +87,11 @@ public class Blokus : MonoBehaviour
     void Start() {
         TileBase tile;
         int actualTile;
-
+        
+        // Load the list of player
         playerList = PlayerList.Players;
 
+        // Create and display the info of each player
         for (int i = 0; i < playerList.Count; i++) {
             float x = PLAYER_INFO_START_POS_X;
             float y = PLAYER_INFO_START_POS_Y - i * PLAYER_INFO_Y_SPACING_MULTIPLIER;
@@ -210,15 +216,50 @@ public class Blokus : MonoBehaviour
             && (VerifyPiecePlacement(selectedPieceMap, (Vector2Int)coordinate, currentPlayer, true))) {
 
                 // Place the piece
+                int generatedScore = 0;
+                int blockPlaced = 0;
+                int bonusScoreMultiplier = TOTAL_NB_PIECE - (currentPlayer.Pieces.Count - 1); // minus 1 because the piece hasn't been removed yet
                 for (int x = 0; x < col; x++) {
                     for (int y = 0; y < row; y++) {
                         if (selectedPieceMap[x, y] != 0) {
                             Vector3Int v3int = new Vector3Int(coordinate.x + x, coordinate.y + y, 0);
                             BlokusMap[v3int.x, v3int.y] = (int)currentPlayer.Color;
                             MainTilemap.SetTile(v3int, GetTileOfPlayer(currentPlayer));
+
+                            // Calculate the score
+                            Vector3Int distanceFromStartingPoint = new Vector3Int();
+                            switch (currentPlayer.Color) {
+                                case BlokusColor.BLUE:
+                                    distanceFromStartingPoint = START_POSITION_BLUE - v3int;
+                                    break;
+                                case BlokusColor.GREEN:
+                                    distanceFromStartingPoint = START_POSITION_GREEN - v3int;
+                                    break;
+                                case BlokusColor.RED:
+                                    distanceFromStartingPoint = START_POSITION_RED - v3int;
+                                    break;
+                                case BlokusColor.YELLOW:
+                                    distanceFromStartingPoint = START_POSITION_YELLOW - v3int;
+                                    break;
+                                default:
+                                    break;
+                            }
+                            // Compute the distance score by forcing the positive value
+                            generatedScore += Mathf.Abs(distanceFromStartingPoint.x);
+                            generatedScore += Mathf.Abs(distanceFromStartingPoint.y);
+                            blockPlaced++;
                         }
                     }
                 }
+                int currentIndex = playerList.IndexOf(currentPlayer);
+                GameObject currentPlayerInfo = playerInfoList[currentIndex];
+                TextMeshProUGUI currentPlayerScore = currentPlayerInfo.transform.Find(PLAYER_INFO_SCORE_COMPONENT_NAME).GetComponent<TextMeshProUGUI>();
+
+
+                generatedScore += blockPlaced * bonusScoreMultiplier;
+                currentPlayer.Score += generatedScore;
+                currentPlayerScore.text = currentPlayer.Score.ToString();
+                DisplayPlayersRank();
 
                 // Remove the piece from the user
                 currentPlayer.Pieces.RemoveAll(x => x.PrefabPath == currentPiece.PrefabPath);
@@ -229,6 +270,29 @@ public class Blokus : MonoBehaviour
                 CheckSpaceForAllPlayers();
             }
 
+        }
+    }
+
+    private void DisplayPlayersRank() {
+        int previousRank = 1;
+        int previousScore = -1;
+        List<Player> orderedPlayers = playerList.OrderByDescending(x => x.Score).ToList();
+        for (int i = 0; i < orderedPlayers.Count; i++) {
+            Player p = orderedPlayers[i];
+            int playerIndex = playerList.IndexOf(p);
+            GameObject playerInfo = playerInfoList[playerIndex];
+            TextMeshProUGUI playerRank = playerInfo.transform.Find(PLAYER_INFO_RANK_COMPONENT_NAME).GetComponent<TextMeshProUGUI>();
+
+            int rank;
+            if (p.Score == previousScore) {
+                rank = previousRank;
+            } else {
+                rank = i + 1;
+                previousScore = p.Score;
+            }
+
+            playerRank.text = rank.ToString();
+            previousRank = rank;
         }
     }
 
@@ -541,7 +605,7 @@ public class Blokus : MonoBehaviour
         // Display the results
         Debug.Log("Game is finish!");
         foreach (Player p in playerList) {
-            if (p.IsBlocked) {
+            if (!p.IsBlocked) {
                 int currentIndex = playerList.IndexOf(p);
                 GameObject currentPlayerInfo = playerInfoList[currentIndex];
                 TextMeshProUGUI currentPlayerStatus = currentPlayerInfo.transform.Find(PLAYER_INFO_STATUS_COMPONENT_NAME).GetComponent<TextMeshProUGUI>();
